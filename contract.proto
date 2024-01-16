@@ -1,0 +1,256 @@
+syntax = "proto3";
+
+package ru.alexshniperson.sputnikn.api.contract.v1;
+
+option go_package = "contract/v1";
+
+service ChatService {
+	rpc AuthUser(AuthUserRequest) returns (AuthUserResponse);
+	
+	rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse);
+
+	rpc SyncRooms(SyncRoomsRequest) returns (SyncRoomsResponse);
+
+	rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+
+	rpc SetRoomReadMarker(RoomReadMarkerRequest) returns (RoomStateChangedResponse);
+
+	rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
+
+	rpc InviteRoomMember(EmptyRequest) returns (RoomStateChangedResponse);
+
+	rpc RemoveRoomMember(EmptyRequest) returns (RoomStateChangedResponse);
+
+    rpc AddRoomMessage(RoomEventMessageRequest) returns (RoomEventMessageResponse);
+}
+
+service ChatStreamService {
+	rpc RoomEventStream(EmptyRequest) returns (stream RoomEventResponse);
+}
+
+message EmptyRequest {}
+
+// >>> auth
+
+message AuthUserRequest {
+    string login = 1;
+    string password = 2;	
+}
+
+message UserDetail {
+    string userId = 1;
+    string fullName = 2;
+    optional string avatar = 3;
+}
+
+enum AuthErrorType {
+    AuthErrorTypeNone = 0;
+    AuthErrorTypeUserWrongCreds = 1;
+}
+
+message AuthUserResponse {
+	AuthErrorType error = 1;
+    optional string accessToken = 2;
+    optional UserDetail detail = 3;
+}
+
+// <<<
+
+// >>> room
+
+message ListRoomsRequest {
+    repeated string roomIds = 1;
+}
+
+enum RoomMemberStatusType {
+    RoomMemberStatusTypeInvited = 0;
+    RoomMemberStatusTypeJoined = 1;
+    RoomMemberStatusTypeLeft = 2;
+    RoomMemberStatusTypeKicked = 3;
+    RoomMemberStatusTypeBanned = 4;
+}
+
+message RoomMemberDetail {
+    string userId = 1;
+    string fullName = 2;
+    bool isOnline = 3;
+    RoomMemberStatusType memberStatus = 4;
+    optional string avatar = 5;
+    optional int64 lastReadMarker = 6;
+}
+
+// The RoomState, it will be sent to client every time Room is changed (title, avatar, members, member read markers)
+message RoomDetail {
+    string roomId = 1;
+    string title = 2;
+    optional string avatar = 3;
+    repeated RoomMemberDetail members = 4;
+    int32 eventMessageUnreadCount = 5;
+    int32 eventSystemUnreadCount = 6;
+}
+
+message ListRoomsResponse {
+    repeated RoomDetail detail = 1;
+}
+
+// <<<
+
+// >>> sync
+
+enum RoomEventType {
+    roomEventTypeAll = 0;
+    roomEventTypeMessage = 1;
+    roomEventTypeSystem = 2;
+}
+
+enum SinceTimeOrderType {
+    sinceTimeOrderTypeNewest = 0;
+    sinceTimeOrderTypeOldest = 1;
+}
+
+message SinceTimeFilter {
+    int64 sinceTimestamp = 1;
+    SinceTimeOrderType orderType = 2;
+}
+
+message SyncRoomFilter {
+    string roomId = 1;
+    // Mean we want to filter room events with offset of time and order direction
+    optional SinceTimeFilter sinceFilter = 2;
+    // Mean we want to filter room events by type
+    RoomEventType eventFilter = 4;
+    // Mean we want to get limited room events with conjunction of sinceFilter and eventFilter
+    int32 eventLimit = 3;
+}
+
+message SyncRoomsRequest {
+    repeated SyncRoomFilter roomFilter = 1;
+}
+
+message ChatAttachmentDetail {
+    string eventId = 1;
+    string attachmentId = 2;
+    string mimeType = 3;
+}
+
+message RoomEventReactionDetail {
+    string eventId = 1;
+    string roomId = 2;
+    string senderId = 3;
+    string content = 4;
+    int64 timestamp = 5;
+}
+
+message RoomEventMessageDetail {
+    string eventId = 1;
+    string roomId = 2;
+    string senderId = 3;
+    optional int32 clientEventId = 4;
+    int32 version = 5;
+    repeated ChatAttachmentDetail attachment = 6;
+    repeated RoomEventReactionDetail reaction = 7;
+    string content = 8;
+    int64 createTimestamp = 9;
+    int64 updateTimestamp = 10;
+}
+
+message RoomEventSystemDetail {
+    string eventId = 1;
+    string roomId = 2;
+    int32 version = 3;
+    string content = 4;
+    int64 createTimestamp = 5;
+}
+
+message SyncRoomsResponse {
+}
+
+// <<<
+
+message RoomEventMessageRequest {
+    string roomId = 1;
+    int32 clientEventId = 2;
+    repeated string attachment = 3;
+    string content = 4;
+    int32 version = 5;
+}
+
+message RoomEventMessageResponse {
+    RoomEventMessageDetail detail = 1;
+}
+
+message RoomEventReaction {
+    string roomId = 1;
+    string messageId = 2;
+    int32 clientEventId = 3;
+    string content = 4;
+}
+
+message ListUsersRequest {
+}
+
+message ListUsersResponse {
+    repeated UserDetail users = 1;
+}
+
+// Will produce RoomStateChangedReply
+message RoomReadMarkerRequest {
+    string roomId = 1;
+    int64 readMarkerTimestamp = 2;
+}
+
+message CreateRoomRequest {
+    string title = 1;
+    optional string avatar = 2;
+    repeated string memberIds = 3;
+}
+
+message CreateRoomResponse {
+    RoomDetail detail = 1;
+}
+
+// Will produce RoomStateChangedResponse
+message InviteRoomMember {
+    string roomId = 1;
+    repeated string memberIds = 2;
+}
+
+// Will produce RoomStateChangedResponse
+message RemoveRoomMember {
+    string roomId = 1;
+    repeated string memberIds = 2;
+}
+
+message RoomStateChangedResponse {
+    RoomDetail detail = 1;
+}
+
+message RoomEventResponse {
+    oneof payload {
+        RoomEventMessageDetail messageEvent = 1;
+        RoomEventSystemDetail systemEvent = 2;
+        RoomStateChangedResponse roomStateChanged = 3;
+        RoomEventMessageDetail roomEventMessage = 4;
+        RoomEventReactionDetail roomEventReaction = 5;
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
