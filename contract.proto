@@ -163,6 +163,8 @@ message RoomEventSystemDetail {
 }
 
 message SyncRoomsResponse {
+    repeated RoomEventMessageDetail messageEvents = 1;
+    repeated RoomEventSystemDetail systemEvents = 2;
 }
 
 // <<<
