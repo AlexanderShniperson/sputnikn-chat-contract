@@ -76,7 +76,7 @@ message RoomMemberDetail {
     bool isOnline = 3;
     RoomMemberStatusType memberStatus = 4;
     optional string avatar = 5;
-    optional int64 lastReadMarker = 6;
+    int64 lastReadMarker = 6;
 }
 
 // The RoomState, it will be sent to client every time Room is changed (title, avatar, members, member read markers)
